@@ -1,0 +1,61 @@
+_target_: finsde.utils.dataloader.SingleStockDataModule
+use_returns: true
+feat_columns: ["Close", "Volume"]
+pred_columns: ["Close"]
+pred_window: 50
+pred_horizon: 3
+train_val_test_split: [0.6, 0.2, 0.2]
+batch_size: 32
+data_dir: "../../data/full_history/"
+
+csv_files: 
+  - 'AAL.csv'
+  - 'AAPL.csv'
+  - 'ABBV.csv'
+  - 'AMD.csv'
+  - 'AMGN.csv'
+  - 'AMZN.csv'
+  - 'BABA.csv'
+  - 'BHP.csv'
+  - 'BIDU.csv'
+  - 'BIIB.csv'
+  - 'BRK-B.csv'
+  - 'C.csv'
+  - 'CAT.csv'
+  - 'CMCSA.csv'
+  - 'CMG.csv'
+  - 'COP.csv'
+  - 'COST.csv'
+  - 'CRM.csv'
+  - 'CVX.csv'
+  - 'DAL.csv'
+  - 'DIS.csv'
+  - 'EBAY.csv'
+  - 'GE.csv'
+  - 'GILD.csv'
+  - 'GLD.csv'
+  - 'GOOG.csv'
+  - 'GSK.csv'
+  - 'INTC.csv'
+  - 'KO.csv'
+  - 'MRK.csv'
+  - 'MSFT.csv'
+  - 'MU.csv'
+  - 'NKE.csv'
+  - 'NVDA.csv'
+  - 'ORCL.csv'
+  - 'PEP.csv'
+  - 'PYPL.csv'
+  - 'QCOM.csv'
+  - 'QQQ.csv'
+  - 'SBUX.csv'
+  - 'T.csv'
+  - 'TGT.csv'
+  - 'TM.csv'
+  - 'TSLA.csv'
+  - 'TSM.csv'
+  - 'USO.csv'
+  - 'V.csv'
+  - 'WFC.csv'
+  - 'WMT.csv'
+  - 'XLF.csv'

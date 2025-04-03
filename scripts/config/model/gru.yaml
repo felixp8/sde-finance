@@ -1,0 +1,16 @@
+_target_: finsde.core.FinLightningModule
+model:
+  _target_: finsde.models.gru.GRUModel
+  input_size: ${eval:'len(${...datamodule.feat_columns})'}
+  hidden_size: 64
+  output_size: ${eval:'len(${...datamodule.pred_columns}) * ${...datamodule.pred_horizon}'}
+  n_layers: 4
+  dropout: 0.1
+loss:
+  _target_: torch.nn.MSELoss
+optimizer_partial:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 1e-4
+lr_scheduler_partial: null
+lr_scheduler_cfg: null

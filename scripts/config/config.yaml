@@ -1,0 +1,16 @@
+defaults:
+  - model: gru
+  - datamodule: stocks_50
+  - trainer: default
+  - callbacks: default
+  - loggers: default
+  - _self_
+
+run_name: run-${now:%Y-%m-%d_%H-%M-%S}
+
+hydra:
+  run:
+    dir: results/${run_name}/hydra_logs/local
+  sweep:
+    dir: results/${run_name}/hydra_logs
+    subdir: ${hydra.job.override_dirname}
