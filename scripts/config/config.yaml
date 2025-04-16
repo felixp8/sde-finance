@@ -1,6 +1,6 @@
 defaults:
-  - model: gru
-  - datamodule: stocks_50
+  - model: discrete_sde
+  - datamodule: stocks_50_eval
   - trainer: default
   - callbacks: default
   - loggers: default

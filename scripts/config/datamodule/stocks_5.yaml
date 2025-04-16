@@ -1,0 +1,16 @@
+_target_: finsde.utils.dataloader.SingleStockDataModule
+feat_columns: ["Close", "Volume", "Open", "High", "Low", "Scaled_sentiment"]
+pred_columns: ["Close"]
+pred_window: 50
+pred_horizon: 3
+standardize: true
+train_val_test_split: [0.6, 0.2, 0.2]
+batch_size: 64
+data_dir: "../../data/full_history/"
+
+csv_files: 
+  - 'AMD.csv'
+  - 'GOOG.csv'
+  - 'KO.csv'
+  - 'TSM.csv'
+  - 'WMT.csv'

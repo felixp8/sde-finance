@@ -1,6 +1,6 @@
 _target_: finsde.core.FinLightningModule
 model:
-  _target_: finsde.models.gru.GRUModel
+  _target_: finsde.models.lstm.LSTMModel
   input_size: ${eval:'len(${...datamodule.feat_columns})'}
   hidden_size: 100
   output_size: ${eval:'len(${...datamodule.pred_columns}) * ${...datamodule.pred_horizon}'}
@@ -15,9 +15,9 @@ optimizer_partial:
 lr_scheduler_partial: 
   _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
   _partial_: true
-  patience: 20
+  patience: 5
   factor: 0.3
-  min_lr: 1e-5
+  min_lr: 1e-6
   cooldown: 5
 lr_scheduler_cfg:
   monitor: train_loss

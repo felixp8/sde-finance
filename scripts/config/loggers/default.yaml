@@ -1,3 +1,2 @@
-# wandb_logger:
-#   _target_: lightning.loggers.wandb.WandbLogger
-#   project: "finsde"
+wandb_logger:
+  _target_: lightning.pytorch.loggers.WandbLogger

@@ -1,11 +1,15 @@
 _target_: finsde.core.FinLightningModule
 model:
-  _target_: finsde.models.gru.GRUModel
+  _target_: finsde.models.transformer.TransformerModel
+  n_encoder_layers: 4
+  n_decoder_layers: 4
+  n_heads: 8
+  d_model: 32
+  d_ff: 1024
   input_size: ${eval:'len(${...datamodule.feat_columns})'}
-  hidden_size: 100
   output_size: ${eval:'len(${...datamodule.pred_columns}) * ${...datamodule.pred_horizon}'}
-  n_layers: 4
-  dropout: 0.2
+  dropout: 0.1
+  activation: "gelu"
 loss:
   _target_: torch.nn.MSELoss
 optimizer_partial:
@@ -15,9 +19,9 @@ optimizer_partial:
 lr_scheduler_partial: 
   _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
   _partial_: true
-  patience: 20
+  patience: 5
   factor: 0.3
-  min_lr: 1e-5
+  min_lr: 1e-6
   cooldown: 5
 lr_scheduler_cfg:
   monitor: train_loss

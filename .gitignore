@@ -175,3 +175,7 @@ cython_debug/
 
 # custom
 scripts/results/*
+scripts/logs/*
+scripts/wandb/*
+*.out
+*.err

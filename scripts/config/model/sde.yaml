@@ -1,0 +1,26 @@
+_target_: finsde.core.FinSDELightningModule
+model:
+  _target_: finsde.models.sde.LatentSDE
+  data_size: ${eval:'len(${...datamodule.feat_columns})'}
+  latent_size: 6
+  context_size: 32
+  hidden_size: 64
+  output_size: ${eval:'len(${...datamodule.pred_columns})'}
+  context_mode: "full"
+  forecast_mode: "prior"
+forward_kwargs:
+  adjoint: false
+  method: "euler"
+optimizer_partial:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 1e-3
+lr_scheduler_partial: 
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  _partial_: true
+  patience: 5
+  factor: 0.3
+  min_lr: 1e-6
+  cooldown: 5
+lr_scheduler_cfg:
+  monitor: train_loss
