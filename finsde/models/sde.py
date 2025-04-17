@@ -1,3 +1,5 @@
+"""Code from https://github.com/google-research/torchsde/blob/master/examples/latent_sde_lorenz.py"""
+
 import torch
 import torch.nn as nn
 import torchsde

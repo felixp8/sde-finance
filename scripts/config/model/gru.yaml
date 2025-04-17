@@ -5,7 +5,7 @@ model:
   hidden_size: 100
   output_size: ${eval:'len(${...datamodule.pred_columns}) * ${...datamodule.pred_horizon}'}
   n_layers: 4
-  dropout: 0.2
+  dropout: 0.5
 loss:
   _target_: torch.nn.MSELoss
 optimizer_partial:

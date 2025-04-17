@@ -6,13 +6,21 @@ from lightning.pytorch.callbacks import Callback
 
 
 class R2Callback(Callback):
-    def __init__(self, n_pred_steps=None, eval_dim=None, log_prefix="", split="val"):
+    def __init__(self, n_pred_steps=None, eval_dim=None, log_prefix="", split="val", predict_kwargs=dict()):
         super().__init__()
         self.n_pred_steps = n_pred_steps
         self.log_prefix = log_prefix
-        self.eval_dim = None if eval_dim is None else int(eval_dim)
+        self.eval_dim = None
+        if eval_dim is not None:
+            if isinstance(eval_dim, (int, float)):
+                self.eval_dim = [int(eval_dim)]
+            else:
+                self.eval_dim = [int(d) for d in eval_dim]
+                if len(self.eval_dim) == 0:
+                    self.eval_dim = None
         assert split in ["val", "test"]
         self.split = split
+        self.predict_kwargs = predict_kwargs
     
     def on_validation_epoch_end(self, trainer, pl_module):
         eval_dataset = trainer.datamodule.val_dataset if self.split == "val" else trainer.datamodule.test_dataset
@@ -30,15 +38,16 @@ class R2Callback(Callback):
                 y_hat = pl_module.predict_step(
                     batch=(x.to(pl_module.device), y.to(pl_module.device)),
                     batch_idx=None,
+                    **self.predict_kwargs,
                 ).to(y.device)
                 y_hat = y_hat.reshape(y.shape)
                 if self.n_pred_steps is None:
-                    y_true.append(y if self.eval_dim is None else y[..., [self.eval_dim]])
-                    y_pred.append(y_hat if self.eval_dim is None else y_hat[..., [self.eval_dim]])
+                    y_true.append(y if self.eval_dim is None else y[..., self.eval_dim])
+                    y_pred.append(y_hat if self.eval_dim is None else y_hat[..., self.eval_dim])
                 else:
                     # Only keep the first n_pred_steps
-                    y_true.append(y[:, :self.n_pred_steps, :] if self.eval_dim is None else y[:, :self.n_pred_steps, [self.eval_dim]])
-                    y_pred.append(y_hat[:, :self.n_pred_steps, :] if self.eval_dim is None else y_hat[:, :self.n_pred_steps, [self.eval_dim]])
+                    y_true.append(y[:, :self.n_pred_steps, :] if self.eval_dim is None else y[:, :self.n_pred_steps, self.eval_dim])
+                    y_pred.append(y_hat[:, :self.n_pred_steps, :] if self.eval_dim is None else y_hat[:, :self.n_pred_steps, self.eval_dim])
             y_true = torch.cat(y_true, dim=0)
             y_pred = torch.cat(y_pred, dim=0)
             r2 = r2_score(
@@ -65,13 +74,21 @@ class R2Callback(Callback):
 
 
 class RecurrentPredR2Callback(Callback):
-    def __init__(self, n_pred_steps=[1, 3, 10], eval_dim=None, log_prefix="", split="val"):
+    def __init__(self, n_pred_steps=[1, 3, 10], eval_dim=None, log_prefix="", split="val", predict_kwargs=dict()):
         super().__init__()
         self.n_pred_steps = n_pred_steps
         self.log_prefix = log_prefix
-        self.eval_dim = None if eval_dim is None else int(eval_dim)
+        self.eval_dim = None
+        if eval_dim is not None:
+            if isinstance(eval_dim, (int, float)):
+                self.eval_dim = [int(eval_dim)]
+            else:
+                self.eval_dim = [int(d) for d in eval_dim]
+                if len(self.eval_dim) == 0:
+                    self.eval_dim = None
         assert split in ["val", "test"]
         self.split = split
+        self.predict_kwargs = predict_kwargs
 
     def on_validation_epoch_end(self, trainer, pl_module):
         eval_dataset = trainer.datamodule.val_dataset if self.split == "val" else trainer.datamodule.test_dataset
@@ -98,6 +115,7 @@ class RecurrentPredR2Callback(Callback):
                     y_curr = pl_module.predict_step(
                         batch=(x_curr.to(pl_module.device), y[:, :orig_pred_horizon, :].to(pl_module.device)),
                         batch_idx=None,
+                        **self.predict_kwargs,
                     ).to(y.device)
                     y_curr = y_curr.reshape((y.shape[0], orig_pred_horizon, -1))[:, [0], :]
                     x_curr = torch.cat([x_curr[:, 1:, :], y_curr], dim=1)
@@ -110,8 +128,8 @@ class RecurrentPredR2Callback(Callback):
                         y_true[i].append(y_curr)
                         y_pred[i].append(y_hat_curr)
                     else:
-                        y_true[i].append(y_curr[..., [self.eval_dim]])
-                        y_pred[i].append(y_hat_curr[..., [self.eval_dim]])
+                        y_true[i].append(y_curr[..., self.eval_dim])
+                        y_pred[i].append(y_hat_curr[..., self.eval_dim])
             y_true = [torch.cat(arr, dim=0) for arr in y_true]
             y_pred = [torch.cat(arr, dim=0) for arr in y_pred]
             for i in range(len(self.n_pred_steps)):

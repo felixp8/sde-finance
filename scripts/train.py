@@ -16,7 +16,16 @@ def train(config):
         "sde" if "sde.Latent" in config.model.model._target_ else
         "srnn"
     )
-    task = "3s" if config.datamodule.pred_horizon == 3 else "10s"
+    if arch == "srnn":
+        fc_mode = "pr" if config.model.model.forecast_mode == "prior" else "po"
+        ctx_mode = "f" if config.model.model.context_mode == "full" else "c" if config.model.model.context_mode == "constant" else "i"
+        n_samples = str(config.model.model.posterior_samples) + "ps"
+        arch = f"{arch}-{fc_mode}-{ctx_mode}-{n_samples}"
+    task = (
+        "multi" if "Multi" in config.datamodule._target_ else 
+        "3s" if config.datamodule.pred_horizon == 3 else 
+        "10s"
+    )
     if "wandb_logger" in config.loggers.keys():
         wandb.init(
             project="finsde",

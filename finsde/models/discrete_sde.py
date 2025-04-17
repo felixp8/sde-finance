@@ -1,3 +1,5 @@
+"""Based on https://github.com/google-research/torchsde/blob/master/examples/latent_sde_lorenz.py"""
+
 import math
 import torch
 import torch.nn as nn

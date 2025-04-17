@@ -210,21 +210,24 @@ class MultiStockDataModule(L.LightningDataModule):
         csv_file: str | Path,
         pred_window=50,
         pred_horizon=3,
+        max_horizon=10,
         standardize=True,
         train_val_test_split=[0.6, 0.2, 0.2],
         batch_size=32,
+        **kwargs,
     ):
         super().__init__()
         self.csv_file = csv_file
         self.pred_window = pred_window
         self.pred_horizon = pred_horizon
+        self.max_horizon = max_horizon
         self.standardize = standardize
         self.train_val_test_split = np.array(train_val_test_split) / np.sum(train_val_test_split)
         self.batch_size = batch_size
 
     def setup(self, stage: str):
         use_test = self.train_val_test_split[2] > 1e-6
-        dataset = SingleStockDataset(
+        dataset = MultiStockDataset(
             csv_file=(self.csv_file),
             pred_window=self.pred_window,
             pred_horizon=self.pred_horizon,
@@ -232,13 +235,13 @@ class MultiStockDataModule(L.LightningDataModule):
         )
         train_len = int(len(dataset.feat) * self.train_val_test_split[0])
         val_len = int(len(dataset.feat) * self.train_val_test_split[1])
-        self.train_dataset = data.Subset(dataset, 
-            range(train_len - self.pred_window - self.pred_horizon + 1))
-        self.val_dataset = data.Subset(dataset,
-            range(train_len, train_len + val_len - self.pred_window - self.pred_horizon + 1))
+        self.train_dataset = data.ConcatDataset([data.Subset(dataset, 
+            range(train_len - self.pred_window - self.max_horizon + 1))])
+        self.val_dataset = data.ConcatDataset([data.Subset(dataset,
+            range(train_len, train_len + val_len - self.pred_window - self.max_horizon + 1))])
         if use_test:
-            self.test_dataset = data.Subset(dataset,
-                range(train_len + val_len, len(dataset.feat) - self.pred_window - self.pred_horizon + 1))
+            self.test_dataset = data.ConcatDataset([data.Subset(dataset,
+                range(train_len + val_len, len(dataset.feat) - self.pred_window - self.max_horizon + 1))])
         else:
             self.test_dataset = None
     

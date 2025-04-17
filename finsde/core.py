@@ -122,11 +122,11 @@ class FinSDELightningModule(L.LightningModule):
         self.log("val_r2", r2)
         return loss
 
-    def predict_step(self, batch, batch_idx):
+    def predict_step(self, batch, batch_idx, **kwargs):
         x, y = batch
         ts_in = torch.arange(0, x.shape[1], device=x.device) / x.shape[1]
         ts_out = torch.arange(0, x.shape[1] + y.shape[1], device=x.device) / x.shape[1]
-        y_hat, _, _ = self(x.permute(1, 0, 2), ts_in, ts_out, **self.forward_kwargs)
+        y_hat, _, _ = self(x.permute(1, 0, 2), ts_in, ts_out, **self.forward_kwargs, **kwargs)
         y_hat = y_hat.permute(1, 0, 2)
         return y_hat
     

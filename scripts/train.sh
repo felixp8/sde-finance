@@ -12,7 +12,7 @@
 #SBATCH --exclude=babel-3-21
 
 echo "$@";
-source /data/user_data/fcpei/miniconda3/etc/profile.d/conda.sh;
+source $userdata/miniconda3/etc/profile.d/conda.sh;
 conda activate finsde;
 cd $userdata/10716-temp/sde-finance/scripts;
 HYDRA_FULL_ERROR=1 WANDB__SERVICE_WAIT=300 python train.py "$@"

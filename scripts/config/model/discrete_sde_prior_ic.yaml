@@ -6,9 +6,9 @@ model:
   context_size: 32
   hidden_size: 64
   output_size: ${eval:'len(${...datamodule.pred_columns})'}
-  context_mode: "constant"
+  context_mode: "ic"
   forecast_mode: "prior"
-  posterior_samples: 4
+  posterior_samples: 1
 optimizer_partial:
   _target_: torch.optim.Adam
   _partial_: true

@@ -16,6 +16,7 @@ class TransformerModel(nn.Module):
         activation: str = "gelu",
     ):
         super().__init__()
+        self.n_heads = n_heads
         self.encoder = nn.TransformerEncoder(
             nn.TransformerEncoderLayer(
                 d_model=d_model,
@@ -41,7 +42,7 @@ class TransformerModel(nn.Module):
         self.input_linear = nn.Linear(input_size, d_model)
         self.output_linear = nn.Linear(d_model, output_size)
         self.pos_enc = RotaryPositionalEmbeddings(
-            dim=d_model,
+            dim=d_model // n_heads,
             max_seq_len=128,
             base=1000,
         )
@@ -50,7 +51,8 @@ class TransformerModel(nn.Module):
         # x shape: (batch_size, seq_len, input_size)
         x = self.input_linear(x)
         # x shape: (batch_size, seq_len, d_model)
-        x = x + self.pos_enc(x.unsqueeze(2)).squeeze(2)
+        x = x.reshape(x.shape[0], x.shape[1], self.n_heads, -1)
+        x = (x + self.pos_enc(x)).flatten(start_dim=2)
         # x shape: (batch_size, seq_len, d_model)
         memory = self.encoder(x)
         # memory shape: (batch_size, seq_len, d_model)
@@ -60,6 +62,9 @@ class TransformerModel(nn.Module):
         # out shape: (batch_size, output_size)
         return out
     
+
+
+"""Code from https://github.com/pytorch/torchtune/blob/main/torchtune/modules/position_embeddings.py"""
 
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
