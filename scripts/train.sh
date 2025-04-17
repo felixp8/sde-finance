@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=sde
 #SBATCH --partition=general
-#SBATCH --time=12:00:00
+#SBATCH --time=2-00:00:00
 #SBATCH --cpus-per-task=8
 #SBATCH --mem-per-cpu=8G
 #SBATCH --gres=gpu:A6000:1

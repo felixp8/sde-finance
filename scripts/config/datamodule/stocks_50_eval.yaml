@@ -1,10 +1,11 @@
 _target_: finsde.utils.dataloader.SingleStockDataModule
 feat_columns: ["Close", "Volume", "Open", "High", "Low", "Scaled_sentiment"]
-pred_columns: ["Close"]
+pred_columns: ["Close", "Volume", "Open", "High", "Low", "Scaled_sentiment"]
 pred_window: 50
 pred_horizon: 3
+max_horizon: 10
 standardize: true
-train_val_test_split: [0.85, 0.15, 0.0]
+train_val_test_split: [0.6, 0.2, 0.2]
 batch_size: 256
 data_dir: "../../data/full_history/"
 

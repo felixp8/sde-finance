@@ -9,10 +9,18 @@ OmegaConf.register_new_resolver("eval", eval)
 @hydra.main(config_path="config", config_name="config", version_base=None)
 def train(config):
     run_dir = Path("results") / config.run_name
+    arch = (
+        "gru" if "GRU" in config.model.model._target_ else
+        "lstm" if "LSTM" in config.model.model._target_ else
+        "transformer" if "Transformer" in config.model.model._target_ else
+        "sde" if "sde.Latent" in config.model.model._target_ else
+        "srnn"
+    )
+    task = "3s" if config.datamodule.pred_horizon == 3 else "10s"
     if "wandb_logger" in config.loggers.keys():
         wandb.init(
             project="finsde",
-            # name=config.run_name,
+            name=f"{arch}-{task}-{config.run_name}",
             config=OmegaConf.to_container(config, resolve=True),
         )
     OmegaConf.save(config, run_dir / "config.yaml")

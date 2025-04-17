@@ -6,8 +6,9 @@ model:
   context_size: 32
   hidden_size: 64
   output_size: ${eval:'len(${...datamodule.pred_columns})'}
-  context_mode: "full"
+  context_mode: "constant"
   forecast_mode: "prior"
+  posterior_samples: 8
 optimizer_partial:
   _target_: torch.optim.Adam
   _partial_: true
@@ -15,9 +16,9 @@ optimizer_partial:
 lr_scheduler_partial: 
   _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
   _partial_: true
-  patience: 5
+  patience: 20
   factor: 0.3
-  min_lr: 1e-6
+  min_lr: 1e-5
   cooldown: 5
 lr_scheduler_cfg:
   monitor: train_loss

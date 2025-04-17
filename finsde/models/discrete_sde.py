@@ -25,7 +25,7 @@ class Encoder(nn.Module):
         self.qz0_net = nn.Linear(hidden_size * num_layers * 2, latent_size * 2)
         if self.context_mode == "full":
             self.lin = nn.Linear(hidden_size * 2, context_size)
-        elif self.context_mode == "ic_only":
+        elif self.context_mode == "constant":
             self.lin = nn.Linear(hidden_size * num_layers * 2, context_size)
 
     def forward(self, inp):
@@ -34,7 +34,8 @@ class Encoder(nn.Module):
         if self.context_mode == "full":
             ctx = self.lin(seq_out)
         elif self.context_mode == "constant":
-            ctx = self.lin(fin_out.permute(1, 0, 2).flatten(start_dim=1))
+            ctx = self.lin(fin_out.permute(1, 0, 2).flatten(start_dim=1))  # (batch_size, context_size)
+            ctx = ctx.unsqueeze(0).expand(seq_out.shape[0], -1, -1)  # (T, batch_size, context_size)
         else:
             ctx = torch.full(
                 (seq_out.shape[0], seq_out.shape[1], self.context_size), 
@@ -70,13 +71,16 @@ class DiscreteLatentSDE(nn.Module):
         )
 
         # Decoder.
-        self.f_net = nn.Sequential(
-            nn.Linear(latent_size + context_size, hidden_size),
-            nn.Softplus(),
-            nn.Linear(hidden_size, hidden_size),
-            nn.Softplus(),
-            nn.Linear(hidden_size, latent_size),
-        )
+        if context_mode != "ic_only":
+            self.f_net = nn.Sequential(
+                nn.Linear(latent_size + context_size, hidden_size),
+                nn.Softplus(),
+                nn.Linear(hidden_size, hidden_size),
+                nn.Softplus(),
+                nn.Linear(hidden_size, latent_size),
+            )
+        else:
+            self.f_net = nn.Identity()  # placeholder, should never be called
         self.h_net = nn.Sequential(
             nn.Linear(latent_size, hidden_size),
             nn.Softplus(),
@@ -160,15 +164,12 @@ class DiscreteLatentSDE(nn.Module):
             prior_mean = zs[-1] + self.alpha * self.h(t, zs[-1])
             prior_std = posterior_std
             if self.kl_estimator == "analytic":
-                log_ratio += torch.mean(torch.stack([kl_divergence(
-                    Normal(loc=posterior_mean[:, i, :], scale=posterior_std[:, i, :]),
-                    Normal(loc=prior_mean[:, i, :], scale=prior_std[:, i, :]),
-                ) for i in range(n_samples)], dim=0), dim=0)
+                log_ratio += kl_divergence(
+                    Normal(loc=posterior_mean, scale=posterior_std),
+                    Normal(loc=prior_mean, scale=prior_std),
+                ).mean(dim=1)
             else:
-                log_ratio += torch.mean(torch.stack([
-                    Normal(loc=prior_mean[:, i, :], scale=prior_std[:, i, :]).log_prob(posterior_sample[:, i, :])
-                    for i in range(n_samples)
-                ], dim=0), dim=0)
+                log_ratio += Normal(loc=prior_mean, scale=prior_std).log_prob(posterior_sample).mean(dim=1)
             zs.append(posterior_sample)
         zs = torch.stack(zs, dim=0).mean(dim=2)  # (T, batch_size, latent_size)
 
@@ -180,7 +181,7 @@ class DiscreteLatentSDE(nn.Module):
         qz0 = Normal(loc=qz0_mean, scale=qz0_logstd.exp())
         pz0 = Normal(loc=self.pz0_mean, scale=self.pz0_logstd.exp())
         logqp0 = kl_divergence(qz0, pz0).sum(dim=1).mean(dim=0)
-        logqp_path = log_ratio.mean(dim=0).sum(dim=-1)
+        logqp_path = log_ratio.sum(dim=1).mean(dim=0)
 
         output = self.output_projector(zs[xs.shape[0]:])
         return output, log_pxs, logqp0 + logqp_path

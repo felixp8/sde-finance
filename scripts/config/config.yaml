@@ -1,5 +1,5 @@
 defaults:
-  - model: discrete_sde
+  - model: gru
   - datamodule: stocks_50_eval
   - trainer: default
   - callbacks: default

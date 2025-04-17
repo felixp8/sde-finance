@@ -24,7 +24,7 @@ class Encoder(nn.Module):
         self.qz0_net = nn.Linear(hidden_size * num_layers * 2, latent_size * 2)
         if self.context_mode == "full":
             self.lin = nn.Linear(hidden_size * 2, context_size)
-        elif self.context_mode == "ic_only":
+        elif self.context_mode == "constant":
             self.lin = nn.Linear(hidden_size * num_layers * 2, context_size)
 
     def forward(self, inp):
