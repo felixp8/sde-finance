@@ -7,6 +7,8 @@ from sklearn.metrics import r2_score
 
 
 class FinLightningModule(L.LightningModule):
+    """Common LightningModule class used for deterministic baseline methods."""
+
     def __init__(
         self, 
         model, 
@@ -74,6 +76,7 @@ class FinLightningModule(L.LightningModule):
 
 
 class FinSDELightningModule(L.LightningModule):
+    """Common LightningModule class used for stochastic methods like latent SDEs."""
     def __init__(
         self,
         model,

@@ -7,9 +7,6 @@
 #SBATCH --gres=gpu:A6000:1
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --error=logs/%x-%j.err
-#SBATCH --mail-type=END
-#SBATCH --mail-user=fcpei@andrew.cmu.edu
-#SBATCH --exclude=babel-3-21
 
 echo "$@";
 source $userdata/miniconda3/etc/profile.d/conda.sh;
