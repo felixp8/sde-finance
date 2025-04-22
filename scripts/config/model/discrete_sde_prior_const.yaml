@@ -9,6 +9,7 @@ model:
   context_mode: "constant"
   forecast_mode: "prior"
   posterior_samples: 1
+  column_dropout: 0.0
 optimizer_partial:
   _target_: torch.optim.Adam
   _partial_: true

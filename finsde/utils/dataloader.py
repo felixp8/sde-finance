@@ -24,6 +24,7 @@ class SingleStockDataset(data.Dataset):
         self.pred_horizon = pred_horizon
         self.max_horizon = max_horizon
         self.standardize = standardize
+        self.csv_file = csv_file
 
         # Load and concatenate all CSV files into a single DataFrame
         self.all_columns = list(set(feat_columns + pred_columns) - set(["Returns"]))
@@ -214,6 +215,7 @@ class MultiStockDataModule(L.LightningDataModule):
         standardize=True,
         train_val_test_split=[0.6, 0.2, 0.2],
         batch_size=32,
+        n_blocks=1,
         **kwargs,
     ):
         super().__init__()
@@ -224,6 +226,7 @@ class MultiStockDataModule(L.LightningDataModule):
         self.standardize = standardize
         self.train_val_test_split = np.array(train_val_test_split) / np.sum(train_val_test_split)
         self.batch_size = batch_size
+        self.n_blocks = n_blocks
 
     def setup(self, stage: str):
         use_test = self.train_val_test_split[2] > 1e-6
@@ -232,16 +235,45 @@ class MultiStockDataModule(L.LightningDataModule):
             pred_window=self.pred_window,
             pred_horizon=self.pred_horizon,
             standardize=self.standardize,
+            max_horizon=self.max_horizon
         )
-        train_len = int(len(dataset.feat) * self.train_val_test_split[0])
-        val_len = int(len(dataset.feat) * self.train_val_test_split[1])
-        self.train_dataset = data.ConcatDataset([data.Subset(dataset, 
-            range(train_len - self.pred_window - self.max_horizon + 1))])
-        self.val_dataset = data.ConcatDataset([data.Subset(dataset,
-            range(train_len, train_len + val_len - self.pred_window - self.max_horizon + 1))])
+        buffer = self.pred_window + self.max_horizon
+        eff_len = len(dataset.feat) - buffer * (self.n_blocks * (2 + int(use_test)) + 1)
+        train_len = int(eff_len * self.train_val_test_split[0])
+        train_block_sizes = np.diff(np.round(np.linspace(0, train_len, self.n_blocks + 2)))
+        val_len = int(eff_len * self.train_val_test_split[1])
+        val_block_sizes = np.diff(np.round(np.linspace(0, val_len, self.n_blocks + 1)))
         if use_test:
-            self.test_dataset = data.ConcatDataset([data.Subset(dataset,
-                range(train_len + val_len, len(dataset.feat) - self.pred_window - self.max_horizon + 1))])
+            test_len = int(eff_len * self.train_val_test_split[2])
+            test_block_sizes = np.diff(np.round(np.linspace(0, test_len, self.n_blocks + 1)))
+        else:
+            test_block_sizes = np.zeros(self.n_blocks)
+        train_indices = []
+        val_indices = []
+        test_indices = []
+        pointer = 0
+        for i in range(self.n_blocks):
+            train_indices.extend(
+                list(range(pointer, pointer + int(round(train_block_sizes[i]))))
+            )
+            pointer += int(round(train_block_sizes[i] + buffer))
+            val_indices.extend(
+                list(range(pointer, pointer + int(round(val_block_sizes[i]))))
+            )
+            pointer += int(round(val_block_sizes[i] + buffer))
+            if use_test:
+                test_indices.extend(
+                    list(range(pointer, int(round(pointer + test_block_sizes[i]))))
+                )
+                pointer += int(round(test_block_sizes[i] + buffer))
+        train_indices.extend(
+            list(range(pointer, pointer + int(round(train_block_sizes[i]))))
+        )
+        pointer += train_block_sizes[-1] + buffer
+        self.train_dataset = data.ConcatDataset([data.Subset(dataset, train_indices)])
+        self.val_dataset = data.ConcatDataset([data.Subset(dataset, val_indices)])
+        if use_test:
+            self.test_dataset = data.ConcatDataset([data.Subset(dataset, test_indices)])
         else:
             self.test_dataset = None
     

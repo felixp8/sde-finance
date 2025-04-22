@@ -59,9 +59,15 @@ class DiscreteLatentSDE(nn.Module):
         forecast_mode="prior",
         kl_estimator="analytic",
         posterior_samples: int = 1,
+        column_dropout: float = 0.0,
+        column_group_size: int = 6,
     ):
         super(DiscreteLatentSDE, self).__init__()
         self.alpha = alpha
+        assert column_dropout >= 0.0 and column_dropout <= 1.0
+        self.column_dropout = column_dropout
+        assert column_group_size > 0
+        self.column_group_size = int(column_group_size)
         # Encoder.
         assert context_mode in ["full", "ic_only", "constant"]
         self.encoder = Encoder(
@@ -131,11 +137,19 @@ class DiscreteLatentSDE(nn.Module):
         out = self.g_net(y)
         return out
 
-    def forward(self, xs, ts_in, ts_out, forecast_mode=None, n_samples=None):
+    def forward(self, xs, ts_in, ts_out, forecast_mode=None, n_samples=None, return_trajectory=False):
+        if self.column_dropout > 0.0:
+            n_cols = xs.shape[-1]
+            n_groups = n_cols // self.column_group_size
+            mask = torch.bernoulli(torch.ones(n_groups, device=xs.device) * (1 - self.column_dropout))
+            mask = mask.repeat_interleave(self.column_group_size, dim=0)[:n_cols]
+            xs_in = xs * mask.unsqueeze(0).unsqueeze(0)  # (T, batch_size, n_cols)
+        else:
+            xs_in = xs
         # Contextualization is only needed for posterior inference.
         forecast_mode = forecast_mode if forecast_mode is not None else self.forecast_mode
         n_samples = n_samples if n_samples is not None else self.posterior_samples
-        ctx, qz0_params = self.encoder(torch.flip(xs, dims=(0,)))
+        ctx, qz0_params = self.encoder(torch.flip(xs_in, dims=(0,)))
         ctx = torch.flip(ctx, dims=(0,))
         if forecast_mode == "prior":
             ctx = torch.cat([
@@ -186,4 +200,6 @@ class DiscreteLatentSDE(nn.Module):
         logqp_path = log_ratio.sum(dim=1).mean(dim=0)
 
         output = self.output_projector(zs[xs.shape[0]:])
+        if return_trajectory:
+            return output, log_pxs, logqp0 + logqp_path, zs
         return output, log_pxs, logqp0 + logqp_path
