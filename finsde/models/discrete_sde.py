@@ -10,6 +10,12 @@ import lightning as L
 
 
 class Encoder(nn.Module):
+    """Encoder module for latent SDE. Internally uses bidirectional GRUs.
+    Has three 'modes':
+        - full: uses the full GRU output over time as time-varying context, and GRU final state to set IC
+        - ic_only: only uses GRU final state to set IC
+        - constant: uses the GRU final state to set IC and provide constant context over time
+    """
     def __init__(self, input_size, hidden_size, context_size, latent_size, num_layers=2, context_mode="full"):
         super(Encoder, self).__init__()
         assert context_mode in ["full", "ic_only", "constant"]
@@ -31,6 +37,7 @@ class Encoder(nn.Module):
             self.lin = nn.Linear(hidden_size * num_layers * 2, context_size)
 
     def forward(self, inp):
+        """Forward pass through encoder. Returns context and initial latent state."""
         seq_out, fin_out = self.gru(inp)
         qz0_params = self.qz0_net(fin_out.permute(1, 0, 2).flatten(start_dim=1))
         if self.context_mode == "full":
@@ -47,6 +54,7 @@ class Encoder(nn.Module):
     
 
 class DiscreteLatentSDE(nn.Module):
+    """Discrete latent SDE model (also called Stochastic Residual Dynamics Model (SRDM))."""
     def __init__(
         self, 
         data_size, 
@@ -120,9 +128,11 @@ class DiscreteLatentSDE(nn.Module):
         self.posterior_samples = posterior_samples
 
     def contextualize(self, ctx):
+        """Set context to use for forward passes."""
         self._ctx = ctx  # A tuple of tensors of sizes (T,), (T, batch_size, d).
 
     def f(self, t, y):
+        """Posterior drift function."""
         ts, ctx = self._ctx
         i = min(torch.searchsorted(ts, t, right=True), len(ts) - 1)
         if torch.all(torch.isnan(ctx[i])):
@@ -131,13 +141,16 @@ class DiscreteLatentSDE(nn.Module):
             return self.f_net(torch.cat((y, ctx[i]), dim=-1))
 
     def h(self, t, y):
+        """Prior drift function."""
         return self.h_net(y)
 
     def g(self, t, y):  # Non-diagonal diffusion.
+        "Diffusion function."
         out = self.g_net(y)
         return out
 
     def forward(self, xs, ts_in, ts_out, forecast_mode=None, n_samples=None, return_trajectory=False):
+        """Forward pass through model. Returns output and log likelihood of input data."""
         if self.column_dropout > 0.0:
             n_cols = xs.shape[-1]
             n_groups = n_cols // self.column_group_size

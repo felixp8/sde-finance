@@ -3,6 +3,7 @@ import torch.nn as nn
 
 
 class GRUModel(nn.Module):
+    """GRU for timeseries forecasting. Uses final GRU state to linearly regress onto future timepoints."""
     def __init__(
         self,
         input_size: int,
@@ -31,6 +32,7 @@ class GRUModel(nn.Module):
         )
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward pass through GRU and linear layer."""
         # x shape: (batch_size, seq_len, input_size)
         h_n = self.gru(x)[1]
         # h_n shape: (num_layers * num_directions, batch_size, hidden_size)
@@ -39,3 +41,4 @@ class GRUModel(nn.Module):
         out = self.linear(h_n)
         # out shape: (batch_size, output_size)
         return out
+    

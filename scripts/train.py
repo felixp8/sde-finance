@@ -1,3 +1,6 @@
+"""Training script for all forecasting models
+"""
+
 from pathlib import Path
 from omegaconf import OmegaConf
 import hydra
@@ -8,7 +11,9 @@ OmegaConf.register_new_resolver("eval", eval)
 
 @hydra.main(config_path="config", config_name="config", version_base=None)
 def train(config):
+    # set up save directory
     run_dir = Path("results") / config.run_name
+    # configure logging name
     arch = (
         "gru" if "GRU" in config.model.model._target_ else
         "lstm" if "LSTM" in config.model.model._target_ else
@@ -26,24 +31,28 @@ def train(config):
         "3s" if config.datamodule.pred_horizon == 3 else 
         "10s"
     )
+    # initialize wandb if needed
     if "wandb_logger" in config.loggers.keys():
         wandb.init(
             project="finsde",
             name=f"{arch}-{task}-{config.run_name}",
             config=OmegaConf.to_container(config, resolve=True),
         )
+    # save config for reference
     OmegaConf.save(config, run_dir / "config.yaml")
+    # initialize training objects
     model = hydra.utils.instantiate(config.model)
     datamodule = hydra.utils.instantiate(config.datamodule)
     callbacks = hydra.utils.instantiate(config.callbacks)
     loggers = hydra.utils.instantiate(config.loggers)
-    # import pdb; pdb.set_trace()
     trainer = L.Trainer(
         callbacks=list(callbacks.values()), 
         logger=list(loggers.values()),
         **OmegaConf.to_object(config.trainer),
     )
+    # train model
     trainer.fit(model, datamodule)
+    # end wandb run
     if "wandb_logger" in config.loggers.keys():
         wandb.finish()
 

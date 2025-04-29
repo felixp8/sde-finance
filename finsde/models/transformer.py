@@ -3,6 +3,8 @@ import torch.nn as nn
 
 
 class TransformerModel(nn.Module):
+    """Transformer encoder-decoder for timeseries forecasting. 
+    Uses final decoder token to linearly regress onto future predictions."""
     def __init__(
         self,
         n_encoder_layers: int,
@@ -48,6 +50,7 @@ class TransformerModel(nn.Module):
         )
     
     def forward(self, x):
+        """Forward pass through the transformer model."""
         # x shape: (batch_size, seq_len, input_size)
         x = self.input_linear(x)
         # x shape: (batch_size, seq_len, d_model)

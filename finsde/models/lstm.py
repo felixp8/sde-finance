@@ -3,6 +3,7 @@ import torch.nn as nn
 
 
 class LSTMModel(nn.Module):
+    """LSTM for timeseries forecasting. Uses final LSTM state to linearly regress onto future timepoints."""
     def __init__(
         self,
         input_size: int,
@@ -31,6 +32,7 @@ class LSTMModel(nn.Module):
         )
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward pass through LSTM and linear layer."""
         # x shape: (batch_size, seq_len, input_size)
         h_n, c_n = self.lstm(x)[1]
         hc_n = torch.cat((h_n, c_n), dim=-1)

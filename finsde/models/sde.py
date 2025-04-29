@@ -9,6 +9,12 @@ import lightning as L
 
 
 class Encoder(nn.Module):
+    """Encoder module for latent SDE. Internally uses bidirectional GRUs.
+    Has three 'modes':
+        - full: uses the full GRU output over time as time-varying context, and GRU final state to set IC
+        - ic_only: only uses GRU final state to set IC
+        - constant: uses the GRU final state to set IC and provide constant context over time
+    """
     def __init__(self, input_size, hidden_size, context_size, latent_size, num_layers=2, context_mode="full"):
         super(Encoder, self).__init__()
         assert context_mode in ["full", "ic_only", "constant"]
@@ -30,6 +36,7 @@ class Encoder(nn.Module):
             self.lin = nn.Linear(hidden_size * num_layers * 2, context_size)
 
     def forward(self, inp):
+        """Forward pass through encoder. Returns context and initial latent state."""
         seq_out, fin_out = self.gru(inp)
         qz0_params = self.qz0_net(fin_out.permute(1, 0, 2).flatten(start_dim=1))
         if self.context_mode == "full":
@@ -45,6 +52,8 @@ class Encoder(nn.Module):
 
 
 class LatentSDE(nn.Module):
+    """Latent SDE model of Li et al. 2020."""
+
     sde_type = "ito"
     noise_type = "diagonal"
 
@@ -116,9 +125,11 @@ class LatentSDE(nn.Module):
         self.forecast_mode = forecast_mode
 
     def contextualize(self, ctx):
+        """Contextualize the SDE with the given context."""
         self._ctx = ctx  # A tuple of tensors of sizes (T,), (T, batch_size, d).
 
     def f(self, t, y):
+        """Posterior drift function."""
         ts, ctx = self._ctx
         i = min(torch.searchsorted(ts, t, right=True), len(ts) - 1)
         if torch.all(torch.isnan(ctx[i])):
@@ -127,9 +138,11 @@ class LatentSDE(nn.Module):
             return self.f_net(torch.cat((y, ctx[i]), dim=1))
 
     def h(self, t, y):
+        """Prior drift function."""
         return self.h_net(y)
 
     def g(self, t, y):  # Non-diagonal diffusion.
+        """Diffusion function."""
         out = self.g_net(y)
         return out
     # def g(self, t, y):  # Diagonal diffusion.
@@ -138,6 +151,7 @@ class LatentSDE(nn.Module):
     #     return torch.cat(out, dim=1)
 
     def forward(self, xs, ts_in, ts_out, adjoint=False, method="euler", forecast_mode=None):
+        """Forward pass through the SDE. Returns the output, log likelihood of the input, and KL divergence."""
         # Contextualization is only needed for posterior inference.
         forecast_mode = forecast_mode if forecast_mode is not None else self.forecast_mode
         ctx, qz0_params = self.encoder(torch.flip(xs, dims=(0,)))
@@ -186,6 +200,7 @@ class LatentSDE(nn.Module):
 
     @torch.no_grad()
     def sample(self, batch_size, ts, bm=None):
+        """"""
         eps = torch.randn(size=(batch_size, *self.pz0_mean.shape[1:]), device=self.pz0_mean.device)
         z0 = self.pz0_mean + self.pz0_logstd.exp() * eps
         zs = torchsde.sdeint(self, z0, ts, names={'drift': 'h'}, dt=1e-3, bm=bm)

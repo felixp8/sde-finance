@@ -29,9 +29,11 @@ class FinLightningModule(L.LightningModule):
         self.lr_scheduler_cfg = lr_scheduler_cfg if lr_scheduler_cfg else {}
     
     def forward(self, x):
+        """Forward pass through model."""
         return self.model(x)
     
     def training_step(self, batch, batch_idx):
+        """Perform one training step, batch forward pass and compute loss."""
         x, y = batch
         y_hat = self(x)
         loss = self.loss(y_hat, torch.flatten(y, start_dim=1))
@@ -39,6 +41,7 @@ class FinLightningModule(L.LightningModule):
         return loss
     
     def validation_step(self, batch, batch_idx):
+        """Perform one validation step, batch forward pass and compute loss and additional metrics."""
         x, y = batch
         y_hat = self(x)
         loss = self.loss(y_hat, torch.flatten(y, start_dim=1))
@@ -51,12 +54,14 @@ class FinLightningModule(L.LightningModule):
         return loss
     
     def predict_step(self, batch, batch_idx):
+        """Perform one prediction step, batch forward pass and return predictions."""
         x, y = batch
         y_hat = self(x)
         y_hat = y_hat.reshape(y.shape)
         return y_hat
     
     def configure_optimizers(self):
+        """Configure optimizers and learning rate schedulers."""
         optimizer = self.optimizer_partial(
             self.parameters()
         )
@@ -99,9 +104,12 @@ class FinSDELightningModule(L.LightningModule):
         self.lr_scheduler_cfg = lr_scheduler_cfg if lr_scheduler_cfg else {}
     
     def forward(self, x, *args, **kwargs):
+        """Forward pass through model."""
         return self.model(x, *args, **kwargs)
     
     def training_step(self, batch, batch_idx):
+        """Perform one training step, batch forward pass and compute loss.
+        For SDE models, need to additionally pass time input to match API."""
         x, y = batch
         ts_in = torch.arange(0, x.shape[1], device=x.device) / x.shape[1]
         ts_out = torch.arange(0, x.shape[1] + y.shape[1], device=x.device) / x.shape[1]
@@ -111,6 +119,7 @@ class FinSDELightningModule(L.LightningModule):
         return loss
     
     def validation_step(self, batch, batch_idx):
+        """Perform one validation step, batch forward pass and compute loss and additional metrics."""
         x, y = batch
         ts_in = torch.arange(0, x.shape[1], device=x.device) / x.shape[1]
         ts_out = torch.arange(0, x.shape[1] + y.shape[1], device=x.device) / x.shape[1]
@@ -126,6 +135,7 @@ class FinSDELightningModule(L.LightningModule):
         return loss
 
     def predict_step(self, batch, batch_idx, **kwargs):
+        """Perform one prediction step, batch forward pass and return predictions."""
         x, y = batch
         ts_in = torch.arange(0, x.shape[1], device=x.device) / x.shape[1]
         ts_out = torch.arange(0, x.shape[1] + y.shape[1], device=x.device) / x.shape[1]
@@ -134,6 +144,7 @@ class FinSDELightningModule(L.LightningModule):
         return y_hat
     
     def configure_optimizers(self):
+        """Configure optimizers and learning rate schedulers."""
         optimizer = self.optimizer_partial(
             self.parameters()
         )

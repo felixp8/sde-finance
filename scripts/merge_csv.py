@@ -1,3 +1,5 @@
+"""Merge multiple single-stock CSV files into one DataFrame with timestamp alignment."""
+
 import pandas as pd
 from pathlib import Path
 
